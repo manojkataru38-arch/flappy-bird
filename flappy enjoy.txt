@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#153e45">
+<title>Little Flight • A Skyward Arcade</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #173e45;
+    --cream: #fff8e9;
+    --orange: #ef754c;
+    --muted: #668083;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background:
+      radial-gradient(ellipse at 15% 20%, #387077 0, transparent 55%),
+      radial-gradient(ellipse at 85% 90%, #325a51 0, transparent 50%),
+      #14383f;
+    color: var(--cream);
+    font-family: "Trebuchet MS", "Avenir Next", sans-serif;
+  }
+
+  button { font: inherit; }
+  button:focus-visible {
+    outline: 3px solid #ed9b32;
+    outline-offset: 5px;
+  }
+
+  .app { width: min(100%, 420px); }
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 13px;
+  }
+  .brand {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .17em;
+    text-transform: uppercase;
+  }
+  .edition {
+    font-size: 10px;
+    letter-spacing: .16em;
+    opacity: .6;
+    text-transform: uppercase;
+  }
+
+  .game {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 420 / 680;
+    overflow: hidden;
+    border: 1px solid #ffffff40;
+    border-radius: 25px;
+    isolation: isolate;
+    background: #bce1dd;
+    box-shadow: 0 24px 65px #001c3060, 0 3px 0 #ffffff10 inset;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .hud {
+    position: absolute;
+    top: 22px;
+    left: 23px;
+    right: 23px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    pointer-events: none;
+    color: var(--ink);
+  }
+  .score-label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: .2em;
+    font-weight: 800;
+  }
+  .score {
+    display: block;
+    font-size: 43px;
+    line-height: 1.1;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .hud-right { display: flex; align-items: center; gap: 12px; }
+  .best-mini { text-align: right; font-size: 13px; font-weight: 800; }
+  .best-mini .score-label { margin-bottom: 4px; font-size: 8px; }
+
+  .sound {
+    pointer-events: auto;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    color: var(--ink);
+    background: #fff8e980;
+    border: 1px solid #ffffff90;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .sound:hover { background: var(--cream); }
+  .sound svg { width: 19px; height: 19px; }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 27px;
+    text-align: center;
+    color: var(--ink);
+    background: linear-gradient(transparent, #eaf0d817 60%, transparent);
+  }
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: .23em;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  h1 {
+    margin: 12px 0 15px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(49px, 12vw, 70px);
+    font-weight: 400;
+    letter-spacing: -.06em;
+    line-height: .93;
+  }
+  h1 em { color: #b95737; font-weight: 400; }
+  .intro {
+    margin: 0;
+    max-width: 245px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #42666a;
+  }
+  .bird-space { height: 108px; }
+  .primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    width: 218px;
+    min-height: 53px;
+    border: 0;
+    border-radius: 15px;
+    background: var(--ink);
+    color: var(--cream);
+    box-shadow: 0 5px 0 #0b292e, 0 10px 20px #173e4520;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 14px;
+    transition: transform .15s, background .15s;
+  }
+  .primary:hover { background: #25565e; transform: translateY(-1px); }
+  .primary:active { transform: translateY(3px); box-shadow: 0 2px 0 #0b292e; }
+  .hint { margin: 19px 0 0; font-size: 10px; letter-spacing: .035em; color: #46686b; }
+  kbd {
+    font: inherit;
+    border: 1px solid #173e452f;
+    border-radius: 4px;
+    padding: 2px 5px;
+    background: #ffffff35;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 310px;
+    padding: 28px 23px;
+    border: 1px solid #ffffffb0;
+    border-radius: 23px;
+    background: #fff8e9f2;
+    box-shadow: 0 17px 50px #173e4525;
+    animation: arrive .25s ease-out;
+  }
+  .card h2 {
+    font: 40px/1.1 Georgia, serif;
+    letter-spacing: -.04em;
+    margin: 10px 0;
+  }
+  .card p { font-size: 12px; line-height: 1.6; color: var(--muted); }
+  .card .primary { width: 100%; margin-top: 23px; }
+  .results { display: grid; grid-template-columns: 1fr 1fr; margin-top: 24px; }
+  .result + .result { border-left: 1px solid #173e4520; }
+  .result span { display: block; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
+  .result strong { display: block; font-size: 39px; margin-top: 5px; }
+  .record { color: #b95737; }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 13px;
+    font-size: 10px;
+    letter-spacing: .05em;
+    color: #c7dfd7a0;
+  }
+  .live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  @keyframes arrive {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-height: 790px) {
+    .app { width: min(100%, calc((100svh - 83px) * .617647)); }
+    body { padding: 10px; }
+    .hud { top: 16px; }
+    .bird-space { height: 75px; }
+    h1 { font-size: clamp(38px, 8vh, 65px); }
+    .intro { font-size: 12px; }
+    .overlay { padding: 18px; }
+  }
+  @media (max-height: 520px) {
+    .masthead, .footer, .intro, .hint, .bird-space { display: none; }
+    .app { width: min(100%, calc((100svh - 20px) * .617647)); }
+    .hud { top: 8px; left: 12px; right: 12px; }
+    .score { font-size: 25px; }
+    .best-mini { display: none; }
+    .sound { width: 32px; height: 32px; }
+    h1 { font-size: 36px; margin: 10px 0 20px; }
+    .eyebrow { font-size: 8px; }
+    .primary { width: 160px; min-height: 40px; font-size: 12px; }
+    .card { padding: 17px 13px; }
+    .card h2 { font-size: 27px; }
+    .card p { margin: 6px 0; }
+    .results { margin-top: 12px; }
+    .result strong { font-size: 27px; }
+    .card .primary { margin-top: 13px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card { animation: none; }
+    .primary { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="masthead">
+    <span class="brand">Little Flight</span>
+    <span class="edition">The sky is calling</span>
+  </header>
+
+  <section class="game" id="game" aria-label="Little Flight arcade game">
+    <canvas id="canvas" width="420" height="680"
+      aria-label="Fly through the gaps. Press Space or the up arrow, click, or tap to flap."></canvas>
+
+    <div class="hud">
+      <div><span class="score-label">SCORE</span><output class="score" id="score">0</output></div>
+      <div class="hud-right">
+        <div class="best-mini"><span class="score-label">PERSONAL BEST</span><span id="best">0</span></div>
+        <button class="sound" id="sound" aria-label="Mute sound" aria-pressed="true" title="Toggle sound">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M11 4 5 9H2v6h3l6 5z" stroke-linejoin="round"/>
+            <g id="soundWaves"><path d="M15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></g>
+            <path id="soundSlash" d="m15 9 6 6m0-6-6 6" hidden/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="overlay" id="startScreen">
+      <span class="eyebrow">A tiny bird. A big adventure.</span>
+      <h1>Find your<br><em>little flight.</em></h1>
+      <p class="intro">A little courage, a little rhythm.<br>How far can your wings take you?</p>
+      <div class="bird-space"></div>
+      <button class="primary" id="startButton">Let's fly <span aria-hidden="true">→</span></button>
+      <p class="hint"><kbd>Space</kbd> / <kbd>↑</kbd> &nbsp; or click / tap to flap</p>
+    </div>
+
+    <div class="overlay" id="overScreen" hidden>
+      <div class="card">
+        <span class="eyebrow" id="overEyebrow">Every flight is a fresh start</span>
+        <h2>A lovely little run.</h2>
+        <p id="overMessage">Take a breath. The sky will wait.</p>
+        <div class="results">
+          <div class="result"><span>This flight</span><strong id="finalScore">0</strong></div>
+          <div class="result"><span>Personal best</span><strong id="finalBest">0</strong></div>
+        </div>
+        <button class="primary" id="restartButton">Fly again <span aria-hidden="true">↗</span></button>
+        <p style="margin-bottom:0">Or press Space to try again</p>
+      </div>
+    </div>
+
+    <div class="overlay" id="pauseScreen" hidden>
+      <div class="card">
+        <span class="eyebrow">A moment in the clouds</span>
+        <h2>Flight paused.</h2>
+        <p>Your adventure is right where you left it.</p>
+        <button class="primary" id="resumeButton">Keep flying <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>Small wings. Endless possibilities.</span>
+    <span>Esc to pause</span>
+  </footer>
+  <div class="live" id="announcement" role="status" aria-live="polite"></div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const canvas = $('canvas');
+  const ctx = canvas.getContext('2d');
+  const W = 420, H = 680, FLOOR = 608;
+  const BIRD_X = 106, RADIUS = 13;
+  const STEP = 1 / 120;
+  const STORAGE_KEY = 'little-flight-best-v1';
+  const SOUND_KEY = 'little-flight-sound-v1';
+
+  function readStorage(key, fallback) {
+    try { return localStorage.getItem(key) ?? fallback; }
+    catch { return fallback; }
+  }
+  function writeStorage(key, value) {
+    try { localStorage.setItem(key, String(value)); }
+    catch { /* Gameplay remains available when storage is blocked. */ }
+  }
+
+  let best = Number(readStorage(STORAGE_KEY, '0'));
+  if (!Number.isSafeInteger(best) || best < 0) best = 0;
+  let soundEnabled = readStorage(SOUND_KEY, 'on') !== 'off';
+  let audio;
+  let state = 'ready';
+  let score = 0, pipes = [], birdY = 310, velocity = 0;
+  let distance = 0, spawnDistance = 0, elapsed = 0;
+  let lastTime = 0, accumulator = 0, flash = 0, deathTime = 0;
+  let wingKick = 0;
+
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('best').textContent = best;
+
+  function unlockAudio() {
+    if (!soundEnabled) return;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!audio) audio = new AudioContext();
+      if (audio.state === 'suspended') audio.resume().catch(() => {});
+    } catch { /* Audio is optional. */ }
+  }
+
+  function tone(from, to, duration, volume = .055, type = 'sine', delay = 0) {
+    if (!soundEnabled || !audio || audio.state !== 'running') return;
+    const now = audio.currentTime + delay;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(from, now);
+    oscillator.frequency.exponentialRampToValueAtTime(to, now + duration);
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration + .02);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+  }
+
+  function updateSoundButton() {
+    $('sound').setAttribute('aria-pressed', String(soundEnabled));
+    $('sound').setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Enable sound');
+    $('soundWaves').style.display = soundEnabled ? '' : 'none';
+    $('soundSlash').style.display = soundEnabled ? 'none' : '';
+  }
+
+  $('sound').addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    writeStorage(SOUND_KEY, soundEnabled ? 'on' : 'off');
+    updateSoundButton();
+    unlockAudio();
+    if (!soundEnabled && audio) audio.suspend().catch(() => {});
+  });
+  updateSoundButton();
+
+  function showScreen(screen) {
+    $('startScreen').hidden = screen !== 'start';
+    $('overScreen').hidden = screen !== 'over';
+    $('pauseScreen').hidden = screen !== 'pause';
+  }
+
+  function flap() {
+    velocity = -350;
+    wingKick = 1;
+    tone(430, 780, .085, .035);
+  }
+
+  function start() {
+    unlockAudio();
+    state = 'playing';
+    score = 0;
+    pipes = [];
+    birdY = 285;
+    velocity = 0;
+    distance = 0;
+    spawnDistance = 0;
+    flash = 0;
+    accumulator = 0;
+    lastTime = 0;
+    $('score').textContent = '0';
+    showScreen(null);
+    $('announcement').textContent = 'Flight started.';
+    // The first obstacle begins offscreen, leaving time to establish a rhythm.
+    addPipe(W + 110);
+    flap();
+  }
+
+  function pause() {
+    if (state !== 'playing') return;
+    state = 'paused';
+    showScreen('pause');
+    $('announcement').textContent = 'Flight paused.';
+  }
+
+  function resume() {
+    if (state !== 'paused') return;
+    unlockAudio();
+    state = 'playing';
+    lastTime = 0;
+    accumulator = 0;
+    showScreen(null);
+    flap();
+  }
+
+  function end() {
+    if (state !== 'playing') return;
+    state = 'over';
+    deathTime = performance.now();
+    flash = reducedMotion ? 0 : .22;
+    const newRecord = score > best;
+    if (newRecord) {
+      best = score;
+      writeStorage(STORAGE_KEY, best);
+    }
+    $('best').textContent = best;
+    $('finalScore').textContent = score;
+    $('finalBest').textContent = best;
+    $('overEyebrow').textContent = newRecord ? 'A new personal best!' : 'Every flight is a fresh start';
+    $('overEyebrow').classList.toggle('record', newRecord);
+    $('overMessage').textContent = score === 0
+      ? 'Short, gentle taps. Aim for the middle of each gap.'
+      : newRecord ? 'A little further than ever before. Beautiful.'
+      : 'Take a breath. The sky will wait.';
+    showScreen('over');
+    $('announcement').textContent = `Game over. Score ${score}. Personal best ${best}.`;
+    tone(170, 45, .26, .08, 'triangle');
+  }
+
+  function action() {
+    unlockAudio();
+    if (state === 'ready') start();
+    else if (state === 'playing') flap();
+    else if (state === 'paused') resume();
+    else if (performance.now() - deathTime > 350) start();
+  }
+
+  $('startButton').addEventListener('click', start);
+  $('restartButton').addEventListener('click', start);
+  $('resumeButton').addEventListener('click', resume);
+
+  $('game').addEventListener('pointerdown', event => {
+    if (event.target.closest('button')) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (!event.isPrimary) return;
+    event.preventDefault();
+    // Game-over restarts use the explicit button to avoid accidental retries.
+    if (state !== 'over') action();
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.code === 'Escape' || event.code === 'KeyP') {
+      event.preventDefault();
+      if (event.repeat) return;
+      if (state === 'playing') pause();
+      else if (state === 'paused') resume();
+      return;
+    }
+    if (!['Space', 'ArrowUp', 'KeyW', 'Enter'].includes(event.code)) return;
+    if (event.target.closest('button') && ['Space', 'Enter'].includes(event.code)) return;
+    event.preventDefault();
+    if (!event.repeat) action();
+  });
+
+  window.addEventListener('blur', pause);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pause();
+  });
+
+  function difficulty() { return Math.min(score / 35, 1); }
+
+  function addPipe(x) {
+    const level = difficulty();
+    const gap = 177 - level * 39;
+    const previous = pipes[pipes.length - 1];
+    let center = 190 + Math.random() * 235;
+    if (previous) {
+      center = Math.max(previous.center - 115, Math.min(previous.center + 115, center));
+    }
+    pipes.push({ x, center, gap, width: 66, scored: false });
+  }
+
+  function circleHitsRect(cx, cy, r, x, y, width, height) {
+    const dx = cx - Math.max(x, Math.min(cx, x + width));
+    const dy = cy - Math.max(y, Math.min(cy, y + height));
+    return dx * dx + dy * dy < r * r;
+  }
+
+  function update(dt) {
+    elapsed += dt;
+    wingKick = Math.max(0, wingKick - dt * 5);
+    flash = Math.max(0, flash - dt);
+
+    if (state === 'ready') {
+      if (!reducedMotion) distance += 25 * dt;
+      return;
+    }
+
+    if (state === 'over') {
+      velocity = Math.min(velocity + 1150 * dt, 700);
+      birdY = Math.min(FLOOR - RADIUS, birdY + velocity * dt);
+      return;
+    }
+
+    if (state !== 'playing') return;
+
+    const speed = 155 + 65 * difficulty();
+    const travel = speed * dt;
+    distance += travel;
+    spawnDistance += travel;
+    velocity = Math.min(velocity + 1120 * dt, 650);
+    birdY += velocity * dt;
+
+    if (spawnDistance >= 235) {
+      spawnDistance -= 235;
+      addPipe(W + 110 - spawnDistance);
+    }
+
+    for (const pipe of pipes) {
+      pipe.x -= travel;
+      const top = pipe.center - pipe.gap / 2;
+      const bottom = pipe.center + pipe.gap / 2;
+
+      // Collision bounds include the slightly wider pipe lips.
+      if (
+        circleHitsRect(BIRD_X, birdY, RADIUS, pipe.x, 0, pipe.width, top) ||
+        circleHitsRect(BIRD_X, birdY, RADIUS, pipe.x - 4, top - 24, pipe.width + 8, 24) ||
+        circleHitsRect(BIRD_X, birdY, RADIUS, pipe.x, bottom, pipe.width, FLOOR - bottom) ||
+        circleHitsRect(BIRD_X, birdY, RADIUS, pipe.x - 4, bottom, pipe.width + 8, 24)
+      ) {
+        end();
+        return;
+      }
+
+      if (!pipe.scored && pipe.x + pipe.width + 4 < BIRD_X - RADIUS) {
+        pipe.scored = true;
+        score++;
+        $('score').textContent = score;
+        tone(660, 880, .12, .05);
+        tone(990, 1320, .16, .04, 'sine', .09);
+      }
+    }
+
+    pipes = pipes.filter(pipe => pipe.x + pipe.width > -10);
+
+    if (birdY - RADIUS <= 0 || birdY + RADIUS >= FLOOR) {
+      birdY = Math.max(RADIUS, Math.min(FLOOR - RADIUS, birdY));
+      end();
+    }
+  }
+
+  function roundRect(x, y, w, h, r, fill) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    ctx.fill();
+  }
+
+  function cloud(x, y, scale, alpha) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = `rgba(255,250,230,${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 36, 13, 0, 0, Math.PI * 2);
+    ctx.ellipse(-15, -10, 17, 17, 0, 0, Math.PI * 2);
+    ctx.ellipse(8, -15, 22, 21, 0, 0, Math.PI * 2);
+    ctx.ellipse(30, -3, 20, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function hills(base, color, amplitude, period, offset) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, FLOOR);
+    for (let x = 0; x <= W + 8; x += 8) {
+      const y = base + Math.sin((x + offset) / period) * amplitude
+        + Math.sin((x + offset) / (period * .53)) * amplitude * .25;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, FLOOR);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawPipe(pipe) {
+    const top = pipe.center - pipe.gap / 2;
+    const bottom = pipe.center + pipe.gap / 2;
+    const gradient = ctx.createLinearGradient(pipe.x, 0, pipe.x + pipe.width, 0);
+    gradient.addColorStop(0, '#397e76');
+    gradient.addColorStop(.3, '#60a08b');
+    gradient.addColorStop(1, '#34736e');
+
+    for (const [y, height, lipY] of [
+      [-10, top + 10, top - 24],
+      [bottom, FLOOR - bottom, bottom]
+    ]) {
+      roundRect(pipe.x, y, pipe.width, height, 5, gradient);
+      ctx.fillStyle = '#c5dfb92b';
+      ctx.fillRect(pipe.x + 10, y, 5, height);
+      ctx.fillStyle = '#123e4820';
+      ctx.fillRect(pipe.x + pipe.width - 9, y, 5, height);
+      roundRect(pipe.x - 4, lipY + 3, pipe.width + 8, 24, 5, '#245e5a');
+      roundRect(pipe.x - 4, lipY, pipe.width + 8, 22, 5, '#71a68c');
+      ctx.fillStyle = '#b9d7a780';
+      ctx.fillRect(pipe.x + 1, lipY + 3, pipe.width - 2, 3);
+    }
+
+    ctx.fillStyle = '#e6e9bb75';
+    const markY = bottom + 41;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(pipe.x + pipe.width / 2, markY + i * 9, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawBird(x, y, rotation, time) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    // Tail feathers.
+    ctx.fillStyle = '#b95837';
+    ctx.beginPath();
+    ctx.moveTo(-15, 3);
+    ctx.lineTo(-29, -8);
+    ctx.lineTo(-26, 8);
+    ctx.lineTo(-13, 11);
+    ctx.fill();
+
+    ctx.fillStyle = '#ef794d';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 21, 18, -.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffbe76';
+    ctx.beginPath();
+    ctx.ellipse(4, 7, 15, 10, -.15, 0, Math.PI * 2);
+    ctx.fill();
+
+    const wingAngle = state === 'over' ? .5
+      : Math.sin(time * 22) * .35 - wingKick * .8;
+    ctx.save();
+    ctx.translate(-7, 3);
+    ctx.rotate(wingAngle);
+    ctx.fillStyle = '#c95b3d';
+    ctx.beginPath();
+    ctx.ellipse(-3, 2, 12, 7, -.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = '#fff8e9';
+    ctx.beginPath();
+    ctx.ellipse(10, -6, 7, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#173e45';
+    ctx.beginPath();
+    ctx.arc(12, -6, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(13, -7, 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#edb947';
+    ctx.beginPath();
+    ctx.moveTo(18, -1);
+    ctx.lineTo(30, 4);
+    ctx.lineTo(18, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#b95737';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-3, -16);
+    ctx.quadraticCurveTo(-8, -24, -12, -20);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const sky = ctx.createLinearGradient(0, 0, 0, FLOOR);
+    sky.addColorStop(0, '#acd8d8');
+    sky.addColorStop(.65, '#deead1');
+    sky.addColorStop(1, '#f6e9ba');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#fff8df65';
+    ctx.beginPath();
+    ctx.arc(325, 138, 64, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff5d7';
+    ctx.beginPath();
+    ctx.arc(325, 138, 43, 0, Math.PI * 2);
+    ctx.fill();
+
+    cloud(((90 - distance * .12) % 550 + 550) % 550 - 65, 152, 1, .56);
+    cloud(((365 - distance * .08) % 570 + 570) % 570 - 65, 270, .7, .43);
+    cloud(((240 - distance * .16) % 570 + 570) % 570 - 65, 355, .9, .3);
+
+    hills(485, '#b2cdb1', 31, 90, distance * .12);
+    hills(534, '#8eb8a0', 27, 69, distance * .22);
+    hills(575, '#689f8c', 19, 52, distance * .36);
+
+    for (const pipe of pipes) drawPipe(pipe);
+
+    ctx.fillStyle = '#e6d7ab';
+    ctx.fillRect(0, FLOOR, W, H - FLOOR);
+    ctx.fillStyle = '#3c7e6d';
+    ctx.fillRect(0, FLOOR, W, 5);
+    ctx.fillStyle = '#a7bd7b';
+    ctx.fillRect(0, FLOOR + 5, W, 8);
+    ctx.fillStyle = '#fff3cb';
+    ctx.fillRect(0, FLOOR + 13, W, 3);
+
+    const groundOffset = distance % 28;
+    ctx.strokeStyle = '#c9b98d';
+    ctx.lineWidth = 2;
+    for (let x = -28; x < W + 28; x += 28) {
+      ctx.beginPath();
+      ctx.moveTo(x - groundOffset, FLOOR + 27);
+      ctx.lineTo(x - groundOffset + 10, FLOOR + 27);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - groundOffset + 14, FLOOR + 46);
+      ctx.lineTo(x - groundOffset + 18, FLOOR + 46);
+      ctx.stroke();
+    }
+
+    if (state === 'ready') {
+      const bob = reducedMotion ? 0 : Math.sin(elapsed * 3) * 7;
+      drawBird(W / 2, 388 + bob, -.08, reducedMotion ? 0 : elapsed);
+    } else {
+      const rotation = Math.max(-.45, Math.min(1.25, velocity / 650));
+      drawBird(BIRD_X, birdY, rotation, elapsed);
+    }
+
+    if (flash > 0) {
+      ctx.fillStyle = `rgba(255,248,233,${flash * 2})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+    draw();
+  }
+
+  function frame(now) {
+    if (!lastTime) lastTime = now;
+    const dt = Math.min((now - lastTime) / 1000, .05);
+    lastTime = now;
+
+    // Fixed-step simulation makes physics independent of display refresh rate.
+    if (state !== 'paused' && !document.hidden) {
+      accumulator += dt;
+      while (accumulator >= STEP) {
+        update(STEP);
+        accumulator -= STEP;
+      }
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
